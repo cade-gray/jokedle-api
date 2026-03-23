@@ -2,8 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-docker-demo/routes"
-	"net/http"
+	"jokedle-api/routes"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -16,47 +15,31 @@ func main() {
 	host := os.Getenv("DB_HOST")
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
+	jokedle_db_name := os.Getenv("JOKEDLE_DB_NAME")
+	auth_db_name := os.Getenv("AUTH_DB_NAME")
 	port := os.Getenv("DB_PORT")
 	sslmode := os.Getenv("DB_SSLMODE")
 
-	dsn := fmt.Sprintf(
+	jokedle_dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		host, user, password, dbname, port, sslmode,
+		host, user, password, jokedle_db_name, port, sslmode,
 	)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	auth_dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		host, user, password, auth_db_name, port, sslmode,
+	)
+
+	jokedle_db, err := gorm.Open(postgres.Open(jokedle_dsn), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		panic("failed to connect jokedle database")
 	}
 
-	routes.RegisterJokeRoutes(router)
-	routes.RegisterPlateRoutes(router, db)
-	routes.RegisterTripRoutes(router)
+	auth_db, err := gorm.Open(postgres.Open(auth_dsn), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect auth database")
+	}
 
-	router.GET("/html", func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(`<h1>Hello, Gin! <span style="color:#55D7E5">ʕ◔ϖ◔ʔ</span></h1>`))
-	})
-	router.GET("/kiba", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Hello, Kiba!",
-		})
-	})
-	router.GET("/cicd", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Hello, CI/CD!",
-		})
-	})
-	router.POST("/ping", func(c *gin.Context) {
-		var req struct {
-			Message string `json:"message"`
-		}
-		if err := c.BindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Pong " + req.Message,
-		})
-	})
+	routes.RegisterJokeRoutes(router, jokedle_db, auth_db)
+
 	router.Run(":4269")
 }
