@@ -6,10 +6,10 @@ import (
 
 // Joke represents the main jokes table
 type Joke struct {
-	JokeID             int       `json:"jokeId" gorm:"primaryKey;column:jokeid"`
+	JokeID             int       `json:"jokeId" gorm:"primaryKey;column:jokeid;autoIncrement"`
 	Setup              string    `json:"setup" gorm:"type:varchar(255);not null"`
 	Punchline          string    `json:"punchline" gorm:"type:varchar(50);not null"`
-	FormattedPunchline string    `json:"formattedPunchline" gorm:"type:text"`
+	FormattedPunchline string    `json:"formattedPunchline" gorm:"type:text;column:formattedpunchline;not null"`
 	Source             *string   `json:"source" gorm:"type:varchar(45)"`
 	CreatedAt          time.Time `json:"createdAt"`
 	UpdatedAt          time.Time `json:"updatedAt"`
@@ -26,7 +26,7 @@ type Sequence struct {
 
 // JokeSubmission represents jokes submitted by users for approval
 type JokeSubmission struct {
-	SubmissionID int       `json:"submissionId" gorm:"primaryKey;column:submissionid"`
+	SubmissionID int       `json:"submissionId" gorm:"primaryKey;column:submissionid;autoIncrement"`
 	Setup        string    `json:"setup" gorm:"type:varchar(255);not null"`
 	Punchline    string    `json:"punchline" gorm:"type:varchar(50);not null"`
 	Source       *string   `json:"source" gorm:"type:varchar(45)"`

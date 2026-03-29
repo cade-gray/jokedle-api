@@ -1,8 +1,10 @@
 package routes
 
 import (
+	"fmt"
 	"jokedle-api/middleware"
 	"jokedle-api/models"
+	"math/rand"
 	"net/http"
 	"strconv"
 
@@ -19,9 +21,6 @@ func RegisterJokeRoutes(router *gin.Engine, db *gorm.DB, authDB *gorm.DB) {
 
 		// GET /joke/id/:id - Get a specific joke by ID (public endpoint)
 		jokeGroup.GET("/id/:id", getJokeByID(db))
-
-		// GET /joke/count - Get total count of jokes (public endpoint)
-		jokeGroup.GET("/count", getJokeCount(db))
 
 		// GET /joke/all/weblist - Get simplified joke list for web display (public endpoint)
 		jokeGroup.GET("/all/weblist", getJokeWebList(db))
@@ -40,14 +39,14 @@ func RegisterJokeRoutes(router *gin.Engine, db *gorm.DB, authDB *gorm.DB) {
 		// POST /joke - Create a new joke (requires authentication)
 		jokeProtected.POST("", createJoke(db))
 
-		// POST /joke/getsequence - Get sequence information (requires authentication)
-		jokeProtected.POST("/getsequence", getSequence(db))
+		// GET /joke/sequence - Get sequence information (requires authentication)
+		jokeProtected.GET("/sequence", getSequence(db))
 
-		// POST /joke/updatesequence - Update sequence number (requires authentication)
-		jokeProtected.POST("/updatesequence", updateSequence(db))
+		// POST /joke/sequence - Update sequence number (requires authentication)
+		jokeProtected.POST("/sequence", updateSequence(db))
 
-		// POST /joke/submission/all - Get all joke submissions (requires authentication)
-		jokeProtected.POST("/submission/all", getAllJokeSubmissions(db))
+		// GET /joke/submission/all - Get all joke submissions (requires authentication)
+		jokeProtected.GET("/submission/all", getAllJokeSubmissions(db))
 	}
 }
 
@@ -167,6 +166,7 @@ func createJoke(db *gorm.DB) gin.HandlerFunc {
 		// Create the joke
 		result := db.Create(&joke)
 		if result.Error != nil {
+			fmt.Println(result.Error)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"error":   "Failed to create joke",
@@ -200,7 +200,11 @@ func getSequence(db *gorm.DB) gin.HandlerFunc {
 func submitJoke(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var requestBody struct {
-			Joke models.JokeSubmission `json:"joke"`
+			Joke struct {
+				Setup     string  `json:"setup"`
+				Punchline string  `json:"punchline"`
+				Source    *string `json:"source"`
+			} `json:"joke"`
 		}
 
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
@@ -208,7 +212,12 @@ func submitJoke(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		joke := requestBody.Joke
+		// Create JokeSubmission without setting SubmissionID
+		joke := models.JokeSubmission{
+			Setup:     requestBody.Joke.Setup,
+			Punchline: requestBody.Joke.Punchline,
+			Source:    requestBody.Joke.Source,
+		}
 
 		// Validate field lengths
 		if len(joke.Setup) > 255 || len(joke.Punchline) > 50 {
@@ -227,7 +236,7 @@ func submitJoke(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Create the submission
+		// Create the submission - PostgreSQL will auto-generate the ID
 		result := db.Create(&joke)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -238,8 +247,9 @@ func submitJoke(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Joke submitted successfully",
+			"success":      true,
+			"message":      "Joke submitted successfully",
+			"submissionId": joke.SubmissionID, // Return the generated ID
 		})
 	}
 }
@@ -263,17 +273,79 @@ func getAllJokeSubmissions(db *gorm.DB) gin.HandlerFunc {
 func updateSequence(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var requestBody struct {
-			SequenceNbr int `json:"sequenceNbr"`
+			SequenceNbr *int `json:"sequenceNbr"` // Changed to pointer to detect nil/absence
+			RandomTf    bool `json:"randomTf"`
 		}
 
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
 			return
 		}
+		// Reject if both sequenceNbr and randomTf are provided
+		if requestBody.SequenceNbr != nil && requestBody.RandomTf {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Cannot specify both sequenceNbr and randomTf. Choose either a specific sequence number or random generation.",
+			})
+			return
+		}
 
+		// Pull the total count of jokes to validate ranges
+		var count int64
+		countLookupResult := db.Model(&models.Joke{}).Count(&count)
+		if countLookupResult.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count jokes"})
+			return
+		}
+
+		if count == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "No jokes available to sequence",
+			})
+			return
+		}
+
+		var sequenceNumber int
+
+		// Determine which sequence number to use
+		if requestBody.SequenceNbr != nil {
+			// Use provided sequence number
+			sequenceNumber = *requestBody.SequenceNbr
+
+			// Validate the provided sequence number
+			if int64(sequenceNumber) > count || sequenceNumber < 1 {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"success": false,
+					"error":   fmt.Sprintf("Invalid sequence number. Must be between 1 and %d", count),
+				})
+				return
+			}
+		} else if requestBody.RandomTf {
+			// Generate random sequence number
+			sequenceNumber = 1 + int(rand.Int63n(count))
+		} else {
+			// Neither sequenceNbr provided nor random requested
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Either sequenceNbr must be provided or randomTf must be true",
+			})
+			return
+		}
+
+		// Reject if both sequenceNbr and randomTf are provided
+		if requestBody.SequenceNbr != nil && requestBody.RandomTf {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Cannot specify both sequenceNbr and randomTf. Choose either a specific sequence number or random generation.",
+			})
+			return
+		}
+
+		// Update the sequence
 		result := db.Model(&models.Sequence{}).
 			Where("sequence_name = ?", "JokeOfDay").
-			Update("sequence_nbr", requestBody.SequenceNbr)
+			Update("sequence_nbr", sequenceNumber)
 
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -291,21 +363,10 @@ func updateSequence(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"success": true})
-	}
-}
-
-// getJokeCount handles GET /joke/count - Returns the total count of jokes
-func getJokeCount(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var count int64
-
-		result := db.Model(&models.Joke{}).Count(&count)
-		if result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count jokes"})
-			return
-		}
-
-		c.JSON(http.StatusOK, []gin.H{{"count": count}})
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"sequenceNbr": sequenceNumber,
+			"randomTf":    requestBody.RandomTf,
+		})
 	}
 }

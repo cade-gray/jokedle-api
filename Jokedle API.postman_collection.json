@@ -1,0 +1,404 @@
+{
+  "info": {
+    "_postman_id": "2d352b2a-9f50-43af-896b-7303af914713",
+    "name": "Jokedle API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "39297339"
+  },
+  "item": [
+    {
+      "name": "Get Joke",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{HOST}}/joke",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Joke By ID",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{HOST}}/joke/id/2",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "id",
+            "2"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Joke Count",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{HOST}}/joke/count",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "count"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "type": "text",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Jokes",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{HOST}}/joke/all/weblist",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "all",
+            "weblist"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "type": "text",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Jokes Detail - Secured",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User",
+            "value": "jokedleadmin",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/joke/all",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "all"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Joke For Review",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"joke\": {\n    \"setup\": \"Why did the chicken cross the road?\",\n    \"punchline\": \"To get to the other side!\",\n    \"source\": \"Classic\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/joke/submission",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "submission"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "type": "text",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Joke Submissions - Secured",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User",
+            "value": "{{USER}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"joke\": {\n    \"setup\": \"Why did the chicken cross the road?\",\n    \"punchline\": \"To get to the other side!\",\n    \"source\": \"Classic\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/joke/submission/all",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "submission",
+            "all"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "type": "text",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Joke - Secured",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-User",
+            "value": "{{USER}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"joke\": {\n    \"setup\": \"Why don't scientists trust atoms?\",\n    \"punchline\": \"Because they make up everything!\",\n    \"formattedPunchline\": \"Because they **make up** everything!\",\n    \"source\": \"Classic\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/joke",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "type": "text",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Joke Sequence - Secured",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User",
+            "value": "{{USER}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/joke/sequence",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "sequence"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "type": "text",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Joke Sequence By sequenceNbr - Secured",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-User",
+            "value": "{{USER}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sequenceNbr\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/joke/sequence",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "sequence"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "type": "text",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Joke Sequence Randomly - Secured",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-User",
+            "value": "{{USER}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"randomTf\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/joke/sequence",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "sequence"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "1",
+              "type": "text",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{AUTH_TOKEN}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}
