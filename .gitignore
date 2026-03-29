@@ -1,5 +1,6 @@
 # Docker files
 compose.dev.yaml
+compose.test.yaml
 
 # Binaries
 *.exe
@@ -29,3 +30,4 @@ compose.dev.yaml
 
 # Environment files
 .env
+
