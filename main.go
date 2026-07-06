@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"jokedle-api/middleware"
 	"jokedle-api/routes"
 	"os"
 
@@ -12,6 +13,7 @@ import (
 
 func main() {
 	router := gin.Default()
+	router.Use(middleware.CORS())
 	host := os.Getenv("DB_HOST")
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
