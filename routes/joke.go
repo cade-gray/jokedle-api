@@ -39,6 +39,9 @@ func RegisterJokeRoutes(router *gin.Engine, db *gorm.DB, authDB *gorm.DB) {
 		// POST /joke - Create a new joke (requires authentication)
 		jokeProtected.POST("", createJoke(db))
 
+		// PUT /joke/id/:id - Update an existing joke (requires authentication)
+		jokeProtected.PUT("/id/:id", updateJoke(db))
+
 		// GET /joke/sequence - Get sequence information (requires authentication)
 		jokeProtected.GET("/sequence", getSequence(db))
 
@@ -177,6 +180,92 @@ func createJoke(db *gorm.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Joke inserted successfully",
+		})
+	}
+}
+
+// updateJoke handles PUT /joke/id/:id - Updates an existing joke (requires authentication)
+func updateJoke(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid joke ID"})
+			return
+		}
+
+		var requestBody struct {
+			Joke struct {
+				Setup              string  `json:"setup"`
+				Punchline          string  `json:"punchline"`
+				FormattedPunchline string  `json:"formattedPunchline"`
+				Source             *string `json:"source"`
+			} `json:"joke"`
+		}
+
+		if err := c.ShouldBindJSON(&requestBody); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
+			return
+		}
+
+		joke := requestBody.Joke
+
+		// Validate required fields
+		if joke.Setup == "" || joke.Punchline == "" || joke.FormattedPunchline == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Setup, punchline, and formattedPunchline are required",
+			})
+			return
+		}
+
+		// Validate field lengths
+		if len(joke.Setup) > 255 {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+				"success": false,
+				"error":   "Setup exceeded character limit (255). Please adjust accordingly.",
+			})
+			return
+		}
+		if len(joke.Punchline) > 50 {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+				"success": false,
+				"error":   "Punchline exceeded character limit (50). Please adjust accordingly.",
+			})
+			return
+		}
+		if joke.Source != nil && len(*joke.Source) > 45 {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+				"success": false,
+				"error":   "Source exceeded character limit (45). Please adjust accordingly.",
+			})
+			return
+		}
+
+		result := db.Model(&models.Joke{}).Where("jokeid = ?", id).Updates(map[string]interface{}{
+			"setup":              joke.Setup,
+			"punchline":          joke.Punchline,
+			"formattedpunchline": joke.FormattedPunchline,
+			"source":             joke.Source,
+		})
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to update joke",
+			})
+			return
+		}
+
+		if result.RowsAffected == 0 {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "Joke not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Joke updated successfully",
 		})
 	}
 }

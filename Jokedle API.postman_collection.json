@@ -255,6 +255,40 @@
       "response": []
     },
     {
+      "name": "Update Joke - Secured",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "X-User",
+            "value": "{{USER}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"joke\": {\n    \"setup\": \"Why don't scientists trust atoms?\",\n    \"punchline\": \"Because they make up everything!\",\n    \"formattedPunchline\": \"Because they **make up** everything!\",\n    \"source\": \"Classic\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/joke/id/1",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "id",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Get Joke Sequence - Secured",
       "request": {
         "method": "GET",
