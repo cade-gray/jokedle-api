@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"jokedle-api/middleware"
 	"jokedle-api/models"
-	"math/rand"
 	"net/http"
 	"strconv"
 
@@ -61,8 +60,9 @@ func getJokesInSequence(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var jokes []models.Joke
 
-		// Query jokes that have matching IDs in the sequences table
-		result := db.Where("jokeid IN (SELECT sequence_nbr FROM sequences)").Find(&jokes)
+		// joke_of_day() advances the sequence if it has not rolled today, then
+		// returns the current joke. See joke-of-day-setup.sql.
+		result := db.Raw("SELECT * FROM joke_of_day()").Scan(&jokes)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jokes from sequence"})
 			return
@@ -415,54 +415,50 @@ func updateSequence(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Pull the total count of jokes to validate ranges
-		var count int64
-		countLookupResult := db.Model(&models.Joke{}).Count(&count)
-		if countLookupResult.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count jokes"})
-			return
-		}
-
-		if count == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "No jokes available to sequence",
-			})
-			return
-		}
-
 		var sequenceNumber int
 
-		// Determine which sequence number to use
-		if requestBody.SequenceNbr != nil {
-			// Use provided sequence number
+		// Determine which sequence number to use. sequence_nbr holds a jokeid,
+		// not an ordinal position, so both branches resolve to an id that
+		// actually exists rather than to a number in 1..count - deleting a joke
+		// leaves gaps that make those two ranges disagree.
+		switch {
+		case requestBody.SequenceNbr != nil:
 			sequenceNumber = *requestBody.SequenceNbr
 
-			// Validate the provided sequence number
-			if int64(sequenceNumber) > count || sequenceNumber < 1 {
+			var matches int64
+			if err := db.Model(&models.Joke{}).Where("jokeid = ?", sequenceNumber).Count(&matches).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate joke ID"})
+				return
+			}
+			if matches == 0 {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"success": false,
-					"error":   fmt.Sprintf("Invalid sequence number. Must be between 1 and %d", count),
+					"error":   fmt.Sprintf("No joke exists with ID %d", sequenceNumber),
 				})
 				return
 			}
-		} else if requestBody.RandomTf {
-			// Generate random sequence number
-			sequenceNumber = 1 + int(rand.Int63n(count))
-		} else {
+
+		case requestBody.RandomTf:
+			// Draw from the ids present rather than generating one, so the pick
+			// can never land on a gap.
+			result := db.Model(&models.Joke{}).Select("jokeid").Order("RANDOM()").Limit(1).Scan(&sequenceNumber)
+			if result.Error != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to select a random joke"})
+				return
+			}
+			if result.RowsAffected == 0 {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"success": false,
+					"error":   "No jokes available to sequence",
+				})
+				return
+			}
+
+		default:
 			// Neither sequenceNbr provided nor random requested
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
 				"error":   "Either sequenceNbr must be provided or randomTf must be true",
-			})
-			return
-		}
-
-		// Reject if both sequenceNbr and randomTf are provided
-		if requestBody.SequenceNbr != nil && requestBody.RandomTf {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Cannot specify both sequenceNbr and randomTf. Choose either a specific sequence number or random generation.",
 			})
 			return
 		}
