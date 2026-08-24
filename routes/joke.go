@@ -50,6 +50,9 @@ func RegisterJokeRoutes(router *gin.Engine, db *gorm.DB, authDB *gorm.DB) {
 
 		// GET /joke/submission/all - Get all joke submissions (requires authentication)
 		jokeProtected.GET("/submission/all", getAllJokeSubmissions(db))
+
+		// DELETE /joke/submission/:id - Delete a joke submission (requires authentication)
+		jokeProtected.DELETE("/submission/:id", deleteJokeSubmission(db))
 	}
 }
 
@@ -355,6 +358,39 @@ func getAllJokeSubmissions(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, submissions)
+	}
+}
+
+// deleteJokeSubmission handles DELETE /joke/submission/:id - Deletes a joke submission (requires authentication)
+func deleteJokeSubmission(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+			return
+		}
+
+		result := db.Where("submissionid = ?", id).Delete(&models.JokeSubmission{})
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to delete joke submission",
+			})
+			return
+		}
+
+		if result.RowsAffected == 0 {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "Joke submission not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Joke submission deleted successfully",
+		})
 	}
 }
 

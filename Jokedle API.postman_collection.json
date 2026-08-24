@@ -215,6 +215,31 @@
       "response": []
     },
     {
+      "name": "Delete Joke Submission - Secured",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "X-User",
+            "value": "{{USER}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/joke/submission/1",
+          "host": [
+            "{{HOST}}"
+          ],
+          "path": [
+            "joke",
+            "submission",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Create Joke - Secured",
       "request": {
         "method": "POST",
